@@ -592,8 +592,29 @@ async def arb_job(context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Arb job xətası: {e}")
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
+async def post_init(app):
+    from telegram import BotCommand
+    await app.bot.set_my_commands([
+        BotCommand("start",     "🤖 Botu başlat və menyu göstər"),
+        BotCommand("scan",      "🔍 8 coini analiz et"),
+        BotCommand("best",      "🏆 Ən yaxşı fürsəti göstər"),
+        BotCommand("status",    "📌 Cari açıq mövqe"),
+        BotCommand("balance",   "💼 Hesab balansı"),
+        BotCommand("trend",     "📈 Trend ticarəti — /trend on/off"),
+        BotCommand("arb",       "🔺 Triangular arbitraj — /arb on/off"),
+        BotCommand("arbscan",   "⚡ Arbitraj imkanlarını skan et"),
+        BotCommand("arbstats",  "📊 Ümumi arbitraj qazanc statistikası"),
+        BotCommand("watchlist", "📋 İzlənən coinlər siyahısı"),
+        BotCommand("add",       "➕ Coin əlavə et — /add DOGE"),
+        BotCommand("remove",    "➖ Coini sil — /remove DOGE"),
+    ])
+    print("✅ Telegram menyusu quruldu")
+
 def main():
-    app = Application.builder().token(TELEGRAM_TOKEN).build()
+    app = (Application.builder()
+           .token(TELEGRAM_TOKEN)
+           .post_init(post_init)
+           .build())
     app.add_handler(CommandHandler("start",     cmd_start))
     app.add_handler(CommandHandler("scan",      cmd_scan))
     app.add_handler(CommandHandler("best",      cmd_best))
