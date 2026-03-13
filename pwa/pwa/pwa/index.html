@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CryptoBot</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0e1a;
+    --bg2:      #0f1525;
+    --bg3:      #161e35;
+    --accent:   #00d4aa;
+    --accent2:  #ff6b35;
+    --green:    #00e676;
+    --red:      #ff3d71;
+    --yellow:   #ffd600;
+    --text:     #e8eaf6;
+    --muted:    #546e8a;
+    --border:   rgba(0,212,170,0.15);
+    --mono:     'Space Mono', monospace;
+    --sans:     'Syne', sans-serif;
+    --radius:   12px;
+    --glow:     0 0 20px rgba(0,212,170,0.2);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid bg ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .container {
+    position:relative; z-index:1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 16px 100px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 20px 0 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .logo span { color: var(--text); }
+  .status-dot {
+    width:10px; height:10px;
+    border-radius:50%;
+    background: var(--muted);
+    transition: all 0.3s;
+  }
+  .status-dot.active {
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.6; transform:scale(1.3); }
+  }
+
+  /* ── Main power button ── */
+  .power-section {
+    display:flex; flex-direction:column; align-items:center;
+    padding: 32px 0 28px;
+  }
+  .power-ring {
+    position:relative;
+    width: 140px; height: 140px;
+    margin-bottom: 20px;
+  }
+  .power-ring svg {
+    width:100%; height:100%;
+    transform: rotate(-90deg);
+  }
+  .power-ring .track { fill:none; stroke:var(--bg3); stroke-width:4; }
+  .power-ring .progress {
+    fill:none; stroke:var(--accent); stroke-width:4;
+    stroke-linecap:round;
+    stroke-dasharray: 377;
+    stroke-dashoffset: 377;
+    transition: stroke-dashoffset 1s ease, stroke 0.3s;
+  }
+  .power-ring.running .progress {
+    stroke-dashoffset: 0;
+    animation: spin-progress 3s linear infinite;
+  }
+  @keyframes spin-progress {
+    from { stroke-dashoffset: 377; }
+    to   { stroke-dashoffset: 0; }
+  }
+  .power-btn {
+    position:absolute; inset:12px;
+    border-radius:50%;
+    background: var(--bg3);
+    border: none;
+    cursor: pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    gap: 6px;
+    transition: all 0.3s;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  }
+  .power-btn:active { transform:scale(0.95); }
+  .power-btn.running {
+    background: rgba(0,230,118,0.08);
+    box-shadow: inset 0 0 20px rgba(0,230,118,0.1), var(--glow);
+  }
+  .power-icon {
+    font-size: 32px;
+    transition: all 0.3s;
+  }
+  .power-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    transition: color 0.3s;
+  }
+  .power-btn.running .power-label { color: var(--green); }
+
+  .status-text {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    transition: color 0.3s;
+  }
+  .status-text.running { color: var(--green); }
+
+  /* ── Stats grid ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: border-color 0.3s;
+  }
+  .stat-card:hover { border-color: rgba(0,212,170,0.3); }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform:uppercase;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-value.green { color: var(--green); }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.yellow { color: var(--yellow); }
+
+  /* ── Section header ── */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform:uppercase;
+    margin-bottom: 12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-title::after {
+    content:''; flex:1; height:1px; background:var(--border);
+  }
+
+  /* ── Risk flags ── */
+  .risk-list {
+    display:flex; flex-direction:column; gap:8px;
+    margin-bottom: 24px;
+  }
+  .risk-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .risk-coin {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .risk-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing:1px;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .risk-badge.safe {
+    background: rgba(0,230,118,0.1);
+    color: var(--green);
+    border: 1px solid rgba(0,230,118,0.3);
+  }
+  .risk-badge.risky {
+    background: rgba(255,61,113,0.1);
+    color: var(--red);
+    border: 1px solid rgba(255,61,113,0.3);
+  }
+
+  /* ── Trades list ── */
+  .trades-list {
+    display:flex; flex-direction:column; gap:8px;
+    margin-bottom: 24px;
+  }
+  .trade-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display:flex; align-items:center; gap:12px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity:0; transform:translateY(-10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .trade-side {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 18px;
+    flex-shrink:0;
+  }
+  .trade-side.buy  { background:rgba(0,230,118,0.1); }
+  .trade-side.sell { background:rgba(255,61,113,0.1); }
+  .trade-info { flex:1; min-width:0; }
+  .trade-symbol {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight:700;
+    margin-bottom:2px;
+  }
+  .trade-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .trade-price {
+    font-family: var(--mono);
+    font-size: 13px;
+    text-align:right;
+  }
+  .trade-price .price-val { display:block; font-weight:700; }
+  .trade-price .qty-val   { font-size:11px; color:var(--muted); }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align:center;
+    padding: 32px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing:1px;
+    background: var(--bg2);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+  }
+  .empty-icon { font-size:32px; margin-bottom:10px; }
+
+  /* ── Refresh btn ── */
+  .refresh-btn {
+    width:100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing:2px;
+    padding: 14px;
+    cursor:pointer;
+    transition: all 0.2s;
+    margin-bottom: 16px;
+  }
+  .refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .refresh-btn.spinning { animation: rotateSpin 1s linear infinite; }
+  @keyframes rotateSpin { to { transform:rotate(360deg); } }
+
+  /* ── Toast ── */
+  .toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 24px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    transition: transform 0.3s ease;
+    z-index:100;
+    white-space:nowrap;
+    box-shadow: var(--glow);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* ── Last update ── */
+  .last-update {
+    text-align:center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    letter-spacing:1px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">CRYPTO<span>BOT</span></div>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+
+  <!-- Power Button -->
+  <div class="power-section">
+    <div class="power-ring" id="powerRing">
+      <svg viewBox="0 0 120 120">
+        <circle class="track"    cx="60" cy="60" r="54"/>
+        <circle class="progress" cx="60" cy="60" r="54"/>
+      </svg>
+      <button class="power-btn" id="powerBtn" onclick="toggleBot()">
+        <span class="power-icon">⚡</span>
+        <span class="power-label" id="powerLabel">BAŞLAT</span>
+      </button>
+    </div>
+    <div class="status-text" id="statusText">Bot dayandırılıb</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Cycle</div>
+      <div class="stat-value accent" id="statCycle">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Trade sayı</div>
+      <div class="stat-value green" id="statTrades">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Son yenilmə</div>
+      <div class="stat-value yellow" id="statTime" style="font-size:14px">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Xəta</div>
+      <div class="stat-value" id="statErrors" style="color:var(--red)">—</div>
+    </div>
+  </div>
+
+  <!-- Risk Flags -->
+  <div class="section-title">Risk vəziyyəti</div>
+  <div class="risk-list" id="riskList">
+    <div class="empty">
+      <div class="empty-icon">🛡️</div>
+      Risk məlumatı yoxdur
+    </div>
+  </div>
+
+  <!-- Trades -->
+  <div class="section-title">Son trade-lər</div>
+  <div class="trades-list" id="tradesList">
+    <div class="empty">
+      <div class="empty-icon">📊</div>
+      Hələ trade yoxdur
+    </div>
+  </div>
+
+  <!-- Refresh -->
+  <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">↻ YENİLƏ</button>
+
+  <div class="last-update" id="lastUpdate"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────
+// Railway-ə deploy etdikdə bu URL avtomatik işləyir (same-origin)
+// Local test üçün: const API = "http://localhost:5000"
+const API = "";
+
+// ── State ────────────────────────────────────────────────────
+let isRunning = false;
+let autoRefreshTimer = null;
+
+// ── Toast ────────────────────────────────────────────────────
+function showToast(msg, duration=2500) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), duration);
+}
+
+// ── Toggle bot ───────────────────────────────────────────────
+async function toggleBot() {
+  const endpoint = isRunning ? "/api/stop" : "/api/start";
+  const btn = document.getElementById("powerBtn");
+  btn.style.opacity = "0.5";
+
+  try {
+    const res  = await fetch(API + endpoint, { method:"POST" });
+    const data = await res.json();
+
+    if (!isRunning && data.status === "started") {
+      showToast("✅ Bot başladıldı!");
+      setRunning(true);
+      startAutoRefresh();
+    } else if (isRunning && data.status === "stopped") {
+      showToast("🛑 Bot dayandırıldı");
+      setRunning(false);
+      stopAutoRefresh();
+    } else {
+      showToast("ℹ️ " + data.status);
+    }
+  } catch(e) {
+    showToast("❌ Server bağlantısı yoxdur");
+  }
+  btn.style.opacity = "1";
+}
+
+// ── UI state ─────────────────────────────────────────────────
+function setRunning(val) {
+  isRunning = val;
+  const dot  = document.getElementById("statusDot");
+  const ring = document.getElementById("powerRing");
+  const btn  = document.getElementById("powerBtn");
+  const lbl  = document.getElementById("powerLabel");
+  const txt  = document.getElementById("statusText");
+
+  if (val) {
+    dot.classList.add("active");
+    ring.classList.add("running");
+    btn.classList.add("running");
+    lbl.textContent = "DAYANDIR";
+    txt.textContent = "Bot işləyir...";
+    txt.classList.add("running");
+  } else {
+    dot.classList.remove("active");
+    ring.classList.remove("running");
+    btn.classList.remove("running");
+    lbl.textContent = "BAŞLAT";
+    txt.textContent = "Bot dayandırılıb";
+    txt.classList.remove("running");
+  }
+}
+
+// ── Fetch status ─────────────────────────────────────────────
+async function fetchStatus() {
+  try {
+    const res  = await fetch(API + "/api/status");
+    const data = await res.json();
+
+    setRunning(data.running);
+
+    document.getElementById("statCycle").textContent  = data.cycle  || "0";
+    document.getElementById("statTrades").textContent = data.trade_count || "0";
+    document.getElementById("statErrors").textContent = data.recent_errors?.length || "0";
+
+    if (data.last_cycle) {
+      const d = new Date(data.last_cycle + "Z");
+      document.getElementById("statTime").textContent =
+        d.toLocaleTimeString("az-AZ", {hour:"2-digit", minute:"2-digit"});
+    }
+
+    // Risk flags
+    renderRisk(data.risk_flags || {});
+
+    // Update time
+    document.getElementById("lastUpdate").textContent =
+      "Son yenilmə: " + new Date().toLocaleTimeString("az-AZ");
+
+  } catch(e) {
+    // Server offline
+  }
+}
+
+// ── Fetch trades ─────────────────────────────────────────────
+async function fetchTrades() {
+  try {
+    const res  = await fetch(API + "/api/trades");
+    const data = await res.json();
+    renderTrades(data.trades || []);
+  } catch(e) {}
+}
+
+// ── Render risk ───────────────────────────────────────────────
+function renderRisk(flags) {
+  const list = document.getElementById("riskList");
+  const keys = Object.keys(flags);
+  if (!keys.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🛡️</div>Risk məlumatı yoxdur</div>`;
+    return;
+  }
+  list.innerHTML = keys.map(coin => `
+    <div class="risk-item">
+      <span class="risk-coin">${coin}</span>
+      <span class="risk-badge ${flags[coin] ? 'risky' : 'safe'}">
+        ${flags[coin] ? '⚠️ RİSKLİ' : '✅ TƏHLÜKƏSİZ'}
+      </span>
+    </div>
+  `).join("");
+}
+
+// ── Render trades ─────────────────────────────────────────────
+function renderTrades(trades) {
+  const list = document.getElementById("tradesList");
+  if (!trades.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📊</div>Hələ trade yoxdur</div>`;
+    return;
+  }
+  list.innerHTML = trades.slice(0,15).map(t => {
+    const isBuy = t.side === "BUY";
+    const time  = new Date(t.time + "Z").toLocaleTimeString("az-AZ",
+      {hour:"2-digit", minute:"2-digit"});
+    return `
+      <div class="trade-item">
+        <div class="trade-side ${isBuy ? 'buy' : 'sell'}">${isBuy ? '📈' : '📉'}</div>
+        <div class="trade-info">
+          <div class="trade-symbol">${t.symbol}</div>
+          <div class="trade-time">${time}</div>
+        </div>
+        <div class="trade-price">
+          <span class="price-val" style="color:${isBuy ? 'var(--green)' : 'var(--red)'}">
+            ${t.side}
+          </span>
+          <span class="qty-val">${t.price !== 'N/A' ? '$' + parseFloat(t.price).toFixed(4) : '—'}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ── Refresh all ───────────────────────────────────────────────
+async function refreshAll() {
+  const btn = document.getElementById("refreshBtn");
+  btn.classList.add("spinning");
+  await Promise.all([fetchStatus(), fetchTrades()]);
+  btn.classList.remove("spinning");
+  showToast("✅ Yeniləndi");
+}
+
+// ── Auto refresh (30 sn) ──────────────────────────────────────
+function startAutoRefresh() {
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(() => {
+    fetchStatus();
+    fetchTrades();
+  }, 30000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+}
+
+// ── Service Worker ────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+// ── Init ──────────────────────────────────────────────────────
+fetchStatus();
+fetchTrades();
+startAutoRefresh();
+</script>
+</body>
+</html>
