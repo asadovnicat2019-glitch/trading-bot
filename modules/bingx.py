@@ -45,7 +45,7 @@ class BingXModule:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=self._headers(),
                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
-                data = await r.json()
+                data = await r.json(content_type=None)
 
         symbols = set()
         if self.mode == "futures":
@@ -77,7 +77,7 @@ class BingXModule:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params, headers=self._headers(),
                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
-                data = await r.json()
+                data = await r.json(content_type=None)
 
         raw = data.get("data", [])
         candles = []
@@ -109,7 +109,7 @@ class BingXModule:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, params=params, headers=self._headers(),
                                     timeout=aiohttp.ClientTimeout(total=10)) as r:
-                data = await r.json()
+                data = await r.json(content_type=None)
         if data.get("code") == 0:
             order = data.get("data", {}).get("order", {})
             logger.info(f"Spot order OK: {order}")
@@ -130,7 +130,7 @@ class BingXModule:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, params=params, headers=self._headers(),
                                     timeout=aiohttp.ClientTimeout(total=10)) as r:
-                data = await r.json()
+                data = await r.json(content_type=None)
         if data.get("code") == 0:
             order = data.get("data", {}).get("order", {})
             logger.info(f"Futures order OK: {order}")
