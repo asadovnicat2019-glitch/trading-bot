@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("Flask")
 
-app = Flask(__name__, static_folder="pwa", static_url_path="/")
+app = Flask(__name__, static_folder="pwa/pwa/pwa", static_url_path="/")
 CORS(app)
 
 config   = Config()
