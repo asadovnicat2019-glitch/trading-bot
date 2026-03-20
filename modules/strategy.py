@@ -1,17 +1,26 @@
 import logging
-import statistics
 
 logger = logging.getLogger("Strategy")
 
 
-def ema(prices: list, period: int) -> list:
-    if len(prices) < period:
-        return []
-    k = 2 / (period + 1)
-    ema_vals = [sum(prices[:period]) / period]
-    for p in prices[period:]:
-        ema_vals.append(p * k + ema_vals[-1] * (1 - k))
-    return ema_vals
+def rsi(prices: list, period: int = 14) -> float:
+    if len(prices) < period + 1:
+        return 50.0
+    gains, losses = [], []
+    for i in range(1, period + 1):
+        diff = prices[-period + i - 1] - prices[-period + i - 2]
+        if diff >= 0:
+            gains.append(diff)
+            losses.append(0)
+        else:
+            gains.append(0)
+            losses.append(abs(diff))
+    avg_gain = sum(gains) / period
+    avg_loss = sum(losses) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
 
 
 class StrategyModule:
@@ -27,33 +36,19 @@ class StrategyModule:
             logger.error(f"Kline fetch error {symbol}: {e}")
             return "HOLD"
 
-        if len(candles) < self.slow_p + 5:
-            logger.warning(f"Not enough candles for {symbol}: {len(candles)}")
+        if len(candles) < 20:
             return "HOLD"
 
-        closes  = [c["close"]  for c in candles]
-        volumes = [c["volume"] for c in candles]
+        closes = [c["close"] for c in candles]
+        rsi_val = rsi(closes, period=14)
 
-        fast_ema = ema(closes, self.fast_p)
-        slow_ema = ema(closes, self.slow_p)
+        logger.debug(f"{symbol} RSI={rsi_val:.2f}")
 
-        if len(fast_ema) < 2 or len(slow_ema) < 2:
-            return "HOLD"
-
-        f_now, f_prev = fast_ema[-1], fast_ema[-2]
-        s_now, s_prev = slow_ema[-1], slow_ema[-2]
-
-        avg_vol  = statistics.mean(volumes[-20:]) if len(volumes) >= 20 else statistics.mean(volumes)
-        vol_ok   = volumes[-1] > avg_vol * 1.2
-
-        crossed_up   = f_prev <= s_prev and f_now > s_now
-        crossed_down = f_prev >= s_prev and f_now < s_now
-
-        if crossed_up:
-            logger.info(f"BUY signal: {symbol}")
+        if rsi_val < 30:
+            logger.info(f"BUY signal: {symbol} RSI={rsi_val:.2f}")
             return "BUY"
-        elif crossed_down:
-            logger.info(f"SELL signal: {symbol}")
+        elif rsi_val > 70:
+            logger.info(f"SELL signal: {symbol} RSI={rsi_val:.2f}")
             return "SELL"
 
         return "HOLD"
