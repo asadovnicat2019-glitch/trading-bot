@@ -16,7 +16,7 @@ class CoinMarketCapModule:
     def get_top_coins(self, limit: int = 20) -> list:
         url = f"{self.BASE_URL}/cryptocurrency/listings/latest"
         params = {
-            "start": 1,
+            "start": 51,
             "limit": limit + 10,
             "convert": "USDT",
             "sort": "market_cap",
