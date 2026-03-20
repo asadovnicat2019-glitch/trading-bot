@@ -49,7 +49,7 @@ class StrategyModule:
         crossed_up   = f_prev <= s_prev and f_now > s_now
         crossed_down = f_prev >= s_prev and f_now < s_now
 
-        if crossed_up and vol_ok:
+        if crossed_up:
             logger.info(f"BUY signal: {symbol}")
             return "BUY"
         elif crossed_down:
